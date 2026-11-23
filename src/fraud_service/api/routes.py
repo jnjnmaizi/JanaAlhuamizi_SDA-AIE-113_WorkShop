@@ -60,4 +60,3 @@ def ready(request: Request):
             headers={"Retry-After": "5"},
         )
     return {"status": "ready", "checked_at": datetime.now(UTC)}
-# Docker layer cache verification
