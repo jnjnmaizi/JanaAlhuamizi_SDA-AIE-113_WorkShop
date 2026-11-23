@@ -34,3 +34,40 @@ Test configuration: 2000 requests, 25 concurrent clients.
 Four workers improved throughput by 4.7% and reduced
 p99 latency by 18.3% in this test.
 Results may vary across repeated runs and machines.
+
+## Lab 3: Docker Containerization
+
+### Image Comparison
+
+| Metric | Naive | Optimized |
+|---|---|---|
+| Build time | 119.85 s | 67.36 s |
+| Rebuild time | Not measured | 0.602 s |
+| Disk usage | 3.33 GB | 846 MB |
+| Content size | 845 MB | 180 MB |
+| User | root | appuser |
+| Fake secret excluded | No | Yes |
+
+### Load Testing
+
+2000 requests, 25 concurrent clients.
+
+| Metric | 4 Workers | Docker |
+|---|---|---|
+| p50 | 121.6 ms | 55.3 ms |
+| p99 | 139.5 ms | 85.0 ms |
+| Throughput | 203.8 req/s | 441.7 req/s |
+| Non-2xx | 0 | 0 |
+
+### Container Resources
+
+- Fraud API memory: 320.9 MiB / 512 MiB
+- Redis memory: 10.3 MiB
+- Graceful shutdown: 0.851 seconds
+- Both containers passed health checks.
+
+### Notes
+
+Docker dependency layers were reused after a source-only change.
+The observed performance improvement requires repeated testing
+before attributing it to containerization.
