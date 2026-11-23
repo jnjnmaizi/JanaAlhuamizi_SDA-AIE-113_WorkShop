@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fraud-service"
+version = "1.0.0"
+description = "Raqib: a fraud-scoring model service (SDAIA Academy, SDA-AIE-113)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # The model artefact is a pickle: it only loads with the versions that wrote it.
+    "scikit-learn==1.9.1",
+    "numpy==2.5.5",
+    "pandas==3.1.1",
+    "joblib==1.6.0",
+    "pydantic>=2.7,<3",
+    "pydantic-settings>=2.3",
+    "fastapi[standard]>=0.115",
+    "structlog>=24.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov", "httpx", "ruff", "mypy", "import-linter"]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers"
+testpaths = ["tests"]
+markers = [
+    "unit: fast, no I/O",
+    "integration: app-level, through TestClient",
+    "behavioural: exercises the real model artefact",
+    "slow: excluded from the per-commit gate",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["fraud_service"]
+omit = ["*/batch.py"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true      # joblib and scikit-learn ship no type stubs
+
+[tool.importlinter]
+root_package = "fraud_service"
+
+[[tool.importlinter.contracts]]
+name = "Clean architecture layers"
+type = "layers"
+layers = [
+    "fraud_service.api",
+    "fraud_service.adapters",
+    "fraud_service.service",
+    "fraud_service.domain",
+]
+
+
+
