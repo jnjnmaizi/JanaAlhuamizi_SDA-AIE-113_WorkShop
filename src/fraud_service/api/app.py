@@ -53,7 +53,13 @@ def create_app() -> FastAPI:
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(trace_id=trace_id)   # on every log line
         t0 = time.perf_counter()
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as exc:  # noqa: BLE001 - final HTTP privacy boundary
+            # Consume route failures before the ASGI server can log exception values.
+            log.error("unhandled_exception", exception_type=type(exc).__name__)
+            response = _error(request, 500, "INTERNAL_ERROR",
+                              "Unexpected error; contact support with trace_id")
         latency_ms = round((time.perf_counter() - t0) * 1000, 1)
         response.headers["X-Trace-Id"] = trace_id
         response.headers["X-Response-Time-Ms"] = str(latency_ms)
