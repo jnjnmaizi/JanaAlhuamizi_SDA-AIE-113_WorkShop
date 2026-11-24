@@ -303,6 +303,6 @@ I wanted this project to show not only **what I built**, but **why each part mat
 **Built by Jana Alhumaizi**  
 *Computer Science · SDAIA Academy SDA-AIE-113 Workshop*
 
-[Workshop](https://aie113.ibrahimalshehri.sa/) · [Original course repository](https://github.com/snow10100/fraud-service) · [Benchmarks](BENCHMARKS.md)
+[SDAIA Academy on GitHub](https://github.com/SDAIAAcademy) · [Workshop](https://aie113.ibrahimalshehri.sa/) · [Original course repository](https://github.com/snow10100/fraud-service) · [Benchmarks](BENCHMARKS.md)
 
 </div>
