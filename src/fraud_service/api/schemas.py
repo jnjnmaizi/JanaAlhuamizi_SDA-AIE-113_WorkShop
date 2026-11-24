@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from fraud_service.domain.entities import Channel, Decision, Transaction
 
@@ -13,7 +13,14 @@ class PredictRequest(BaseModel):
     channel: Channel
     merchant_category: str = Field(min_length=2, max_length=40)
     customer_id: str = Field(min_length=4, max_length=64)
-    timestamp: datetime
+    timestamp: AwareDatetime
+
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def require_timestamp_string(cls, value: object) -> object:
+        if not isinstance(value, str):
+            raise ValueError("timestamp must be an ISO-8601 string with a timezone")  # noqa: TRY004 - Pydantic requires ValueError for a 422
+        return value
 
     def to_domain(self) -> Transaction:
         return Transaction(**self.model_dump())

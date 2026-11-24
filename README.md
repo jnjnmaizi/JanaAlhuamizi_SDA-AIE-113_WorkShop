@@ -3,174 +3,59 @@
 # RAQIB
 ### Fraud Scoring, Engineered with Care
 
-**From a notebook with a silent bug to a tested, containerized AI service.**
-
-A software engineering journey through **SDAIA Academy · SDA-AIE-113**
+A notebook-to-service engineering project by **Jana Alhumaizi**<br>
+**SDAIA Academy · SDA-AIE-113 · Individual submission**
 
 [![CI](https://github.com/jnjnmaizi/JanaAlhuamizi_SDA-AIE-113_WorkShop/actions/workflows/ci.yml/badge.svg)](https://github.com/jnjnmaizi/JanaAlhuamizi_SDA-AIE-113_WorkShop/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12-DB2777?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/API-FastAPI-F9A8D4?style=flat-square&labelColor=831843)
-![Pytest](https://img.shields.io/badge/Tests-Pytest-DB2777?style=flat-square)
 ![Docker](https://img.shields.io/badge/Runtime-Docker-F9A8D4?style=flat-square&labelColor=831843)
 
-**[Architecture](#02--how-raqib-works) · [The labs](#03--the-workshop-journey) · [Quick start](#04--quick-start)**
+[Run it](#quick-start) · [Architecture](#architecture) · [Evidence](docs/EVIDENCE.md) · [Journal](JOURNAL.md)
 
 </div>
 
----
+Raqib validates a transaction, computes model features, predicts a fraud score and applies an **allow / review / block** policy. The project demonstrates six engineering modules through seven lab sessions, including 2a and 2b.
 
-## 01 · The Idea
+> **Scope:** this repository implements the workshop labs using **5,000 synthetic transactions**. The instructor approved Raqib as the author’s individual final submission, as confirmed by Jana. It is an educational service, not a live payment system.
 
-A machine learning model is only one part of an AI system.
+## Quick start
 
-The harder question is: **Can we trust the software around it?**
+### Docker
 
-**Raqib** is a workshop fraud-scoring service. It receives a transaction, checks the data, asks a trained scikit-learn model for a risk score, and uses clear rules to decide whether to **allow**, **review**, or **block** the transaction.
-
-The project began with legacy notebook code that could run **without an error but still produce wrong results**. Each lab added another layer of reliability.
-
-> **My approach:** Don't just make it work. Understand it, test what could fail, and make the result easy to explain.
-
-| Input | Inside the service | Output |
-| :--- | :--- | :--- |
-| Transaction JSON | Validation → feature extraction → model → decision policy | Risk probability, decision, model version, trace ID |
-| Invalid request | Strict field checks | Safe, understandable error |
-| Missing model file | Startup validation | Clear failure before serving requests |
-
-*This is an educational workshop service, not a live payment system. A model score is a risk signal, not proof of fraud.*
-
-## 02 · How Raqib Works
-
-### One transaction, step by step
-
-~~~mermaid
-flowchart TD
-    A["Transaction JSON"] --> B["FastAPI<br/>Validate request"]
-    B --> C["Domain<br/>Build model features"]
-    C --> D["FraudScorer<br/>Coordinate scoring"]
-    D --> E["SklearnModel adapter<br/>Run trained model"]
-    E --> F["Fraud probability"]
-    F --> G{"Decision policy"}
-    G -->|"Lower risk"| H["ALLOW"]
-    G -->|"Review band"| I["REVIEW"]
-    G -->|"Block threshold reached"| J["BLOCK"]
-    H --> K["Response + trace ID"]
-    I --> K
-    J --> K
-    classDef pink fill:#FCE7F3,stroke:#BE185D,color:#500724;
-    classDef pale fill:#FFF1F2,stroke:#DB2777,color:#500724;
-    class B,C,D,E,F,G pink;
-    class A,H,I,J,K pale;
-~~~
-
-### Why the layers are separate
-
-| Layer | What it does | Where to find it |
-| :--- | :--- | :--- |
-| **Domain** | Defines transactions, features, and business decisions. | `src/fraud_service/domain/` |
-| **Service** | Connects the model's prediction to the decision rule. | `service/scorer.py` and `service/interfaces.py` |
-| **Adapter** | Translates features into the trained scikit-learn pipeline's format. | `adapters/sklearn_model.py` |
-| **API** | Checks HTTP requests and returns useful, consistent responses. | `src/fraud_service/api/` |
-| **Configuration** | Validates settings before the API starts. | `config.py` |
-| **Logging** | Produces searchable JSON events and masks sensitive keys. | `logging_setup.py` |
-
-**The benefit:** changing the API should not change the decision rules. Changing the ML library should not require rewriting the domain.
-
-### The decision rule
-
-The default block threshold is **0.85** and the review band is **0.15** below it.
-
-| Probability | Decision |
-| :--- | :--- |
-| Less than **0.70** | `allow` |
-| **0.70** to less than **0.85** | `review` |
-| **0.85** or higher | `block` |
-
-These values reflect the implementation in [`domain/policies.py`](src/fraud_service/domain/policies.py); they are not a claim about real-world model accuracy.
-
-## 03 · The Workshop Journey
-
-**Seven modules, one evolving project.** Every lab answers one practical engineering question.
-
-| Lab | The question | What I implemented |
-| :--- | :--- | :--- |
-| **01 · Refactoring** | How do I catch a silent bug? | Clean domain/service/adapter layers, a batch entrypoint, and comparison with trusted golden scores. |
-| **02a · Prediction API** | How can another app call the model? | FastAPI, strict request schemas, prediction and service health endpoints. |
-| **02b · API Hardening** | What if the request is invalid or traffic grows? | Model warm-up, safe error responses, trace IDs, and load tests. |
-| **03 · Docker** | Will it run consistently elsewhere? | Multi-stage image, non-root user, health checks, and a Docker Compose stack. |
-| **04 · Testing** | How do I prevent a regression? | Unit, integration, and behavioural tests, malformed-request checks, golden-file testing, and coverage. |
-| **05 · CI/CD** | Can the checks run automatically? | GitHub Actions for lint, tests, Docker smoke tests, publishing, and nightly regression testing. |
-| **06 · Security** | How can I investigate issues safely? | Typed settings, fail-fast startup, structured JSON logging, secret masking, and an incident-response drill. |
-
-**Workshop reference:** [Original lab instructions](https://github.com/snow10100/fraud-service/tree/main/labs).
-
-## 04 · Quick Start
-
-### Requirements
-
-- Python **3.12** and Git
-- Docker Desktop, only if using the container option
-- The bundled model at `models/fraud_xgb_v3.joblib`
-
-### Option A: Run locally with Python
-
-**1. Clone and install.**
-
-~~~bash
+```bash
 git clone https://github.com/jnjnmaizi/JanaAlhuamizi_SDA-AIE-113_WorkShop.git
 cd JanaAlhuamizi_SDA-AIE-113_WorkShop
+docker compose up --build -d
+docker compose ps
+```
+
+Open [Swagger UI](http://localhost:8000/docs). Wait until the API is healthy. Stop with `docker compose down`.
+
+### Python 3.12
+
+```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
-~~~
+cp configs/settings.example.env .env
+python -m uvicorn fraud_service.api.app:create_app --factory --reload --no-access-log
+```
 
-On Windows, activate with `.venv\Scripts\activate`.
+Run from the repository root. On Windows, create the environment with `py -3.12 -m venv .venv`, activate with `.venv\Scripts\activate`, and copy the settings with `Copy-Item configs/settings.example.env .env`. Never commit real credentials.
 
-**2. Create a local `.env` file in the repository root.**
+### Send a transaction
 
-~~~dotenv
-FRAUD_MODEL_PATH=models/fraud_xgb_v3.joblib
-FRAUD_BLOCK_THRESHOLD=0.85
-FRAUD_LOG_LEVEL=INFO
-~~~
-
-See [`configs/settings.example.env`](configs/settings.example.env) for the documented settings. **Never commit real secrets or your local `.env`.**
-
-**3. Start the API.**
-
-~~~bash
-python -m uvicorn fraud_service.api.app:create_app --factory --reload
-~~~
-
-Open **http://localhost:8000/docs** for interactive API documentation.
-
-### Option B: Run with Docker
-
-~~~bash
-docker compose up --build -d
-docker compose ps
-~~~
-
-The Compose stack includes the fraud API and a Redis service, both with health checks. To stop it:
-
-~~~bash
-docker compose down
-~~~
-
-### Try a prediction
-
-With the API running, open a second terminal:
-
-~~~bash
-curl -X POST http://localhost:8000/v1/predict \
+```bash
+curl -s http://localhost:8000/v1/predict \
   -H "Content-Type: application/json" \
   -H "X-Trace-Id: jana-demo-001" \
   -d @payloads/sample.json
-~~~
+```
 
-The supplied sample input is:
+On Windows PowerShell, use `curl.exe` or Swagger UI.
 
-~~~json
+```json
 {
   "transaction_id": "TXN-2026-00042",
   "amount_sar": 249.99,
@@ -179,130 +64,120 @@ The supplied sample input is:
   "customer_id": "CUST-00077",
   "timestamp": "2026-07-05T03:30:00+00:00"
 }
-~~~
+```
 
-The response includes `transaction_id`, `fraud_probability`, `decision`, `model_version`, and `trace_id`.
+Verified response from the local container (trace ID set by the caller):
 
-| Endpoint | Simple explanation |
-| :--- | :--- |
-| `POST /v1/predict` | Score a transaction and return a decision. |
-| `GET /v1/health` | Is the application process alive? |
-| `GET /v1/ready` | Is the trained model loaded and ready? |
-| `GET /docs` | Explore the API in Swagger UI. |
+```json
+{
+  "transaction_id": "TXN-2026-00042",
+  "fraud_probability": 0.62614,
+  "decision": "allow",
+  "model_version": "v3.2.0",
+  "trace_id": "jana-demo-001"
+}
+```
 
-**Health ≠ readiness:** a running process may not yet be ready to make predictions.
+A negative amount returns HTTP 422:
 
-## 05 · Testing & Automation
+```json
+{
+  "error": {
+    "code": "INVALID_REQUEST",
+    "message": "Request body failed validation",
+    "trace_id": "jana-demo-001",
+    "details": [{"field": "amount_sar", "problem": "Input should be greater than 0"}]
+  }
+}
+```
 
-Testing here is about more than checking if the server returns HTTP 200.
+| Endpoint | Purpose |
+|---|---|
+| `POST /v1/predict` | Validate and score one transaction |
+| `GET /v1/health` | Process liveness and code revision |
+| `GET /v1/ready` | Model readiness; otherwise 503 with `Retry-After` |
+| `GET /docs` | Interactive request and response documentation |
 
-| Test level | What it checks |
-| :--- | :--- |
-| **Unit** | Small rules and feature calculations. |
-| **Integration** | The API contract, errors, and invalid payloads. |
-| **Behavioural** | Important expectations about model decisions. |
-| **Golden-file regression** | Scoring stays aligned with **5,000** trusted expected results. |
+Timestamps must be ISO-8601 strings with a timezone. Features use **UTC**, matching the training data. This deliberately rejects naive dates and numeric epochs. Extra fields are rejected. Trace IDs appear in responses and structured request logs.
 
-~~~bash
-# Fast checks with coverage
-python -m pytest -m "not slow" --cov --cov-report=term-missing --cov-fail-under=80
+## Architecture
 
-# The slow, full golden-file test
-python -m pytest -m slow
-
-# Code quality and architecture checks
-python -m ruff check src tests
-python -m mypy src/fraud_service
-lint-imports
-~~~
-
-**Recorded GitHub Actions result, 24 Nov 2026:** **70 tests passed**, **1 slow test deselected**, and **98.46% coverage** in the per-commit test job. The slower golden-file regression is also included in the nightly workflow.
-
-### From pull request to published image
-
-~~~mermaid
-flowchart TD
-    PR["Pull request"] --> L["Lint + type checks<br/>+ architecture rules"]
-    PR --> T["Tests + coverage gate"]
-    L --> I["Docker image smoke test"]
-    T --> I
-    I --> R["Review and merge"]
-    R --> M["Push to main"]
-    M --> P["Publish container image to GHCR"]
-    N["Nightly schedule"] --> S["Full suite, including slow tests"]
+```mermaid
+flowchart LR
+    A[Transaction JSON] --> B[FastAPI validation]
+    B --> C[Domain features]
+    C --> D[FraudScorer]
+    D --> E[Model adapter]
+    E --> F[Decision policy]
+    F --> G[Score + decision + trace ID]
     classDef pink fill:#FCE7F3,stroke:#BE185D,color:#500724;
-    class PR,L,T,I,R,M,P,N,S pink;
-~~~
+    class A,B,C,D,E,F,G pink;
+```
 
-The workflows live in [`ci.yml`](.github/workflows/ci.yml) and [`nightly.yml`](.github/workflows/nightly.yml).
+| Layer | Responsibility | Source |
+|---|---|---|
+| Domain | Transactions, UTC features, decision thresholds | [domain](src/fraud_service/domain/) |
+| Service | Model protocol and scoring orchestration | [service](src/fraud_service/service/) |
+| Adapter | Load the model and translate features | [sklearn_model.py](src/fraud_service/adapters/sklearn_model.py) |
+| API | HTTP contract, warm-up, errors and tracing | [api](src/fraud_service/api/) |
+| Configuration | Validate settings before serving | [config.py](src/fraud_service/config.py) |
+| Logging | JSON events and recursive key masking | [logging_setup.py](src/fraud_service/logging_setup.py) |
 
-## 06 · The Numbers Behind the Improvements
+Inner layers do not import outer layers; `lint-imports` enforces this. The batch entrypoint and API reuse the same scorer.
 
-These are **observed workshop results**, not promises for other computers or production environments.
+Default decisions: **allow < 0.70**, **review ≥ 0.70 and < 0.85**, **block ≥ 0.85**. The block threshold is configurable; the review band is 0.15.
 
-| Experiment | Before | After | Observation |
-| :--- | ---: | ---: | :--- |
-| First request with warm-up | 41.225 ms | 21.798 ms | About **47%** lower first-request time. |
-| Docker image size | 3.33 GB | 846 MB | Multi-stage build produced a smaller image. |
-| p99 latency comparison | 139.5 ms (4 local workers) | 85.0 ms (Docker) | Docker run was faster *in this test*; controlled repeats would be needed to explain why. |
-| CI image-smoke job | 144 s | 37 s | Later build benefited from caching; run conditions were not identical. |
+## Model and limitations
 
-Full evidence and caveats: [`BENCHMARKS.md`](BENCHMARKS.md).
+- The actual estimator is scikit-learn's **HistGradientBoostingClassifier**, with a preprocessing pipeline. `fraud_xgb_v3.joblib` is the inherited filename, not an XGBoost claim.
+- Data and labels are synthetic, generated by [the course asset script](scripts/make_course_assets.py). Golden scores prove regression consistency, not accuracy on unseen real payments.
+- Inputs: log amount, channel, merchant category, UTC hour and night flag. Identifiers are not model features.
+- Redis in Compose is a health-dependency exercise; prediction does **not** read from Redis yet.
+- An explanation engine and real-data training are possible future extensions; they are outside the approved Raqib submission scope.
 
-## 07 · Security by Design
+## Verify the service
 
-- **Fail fast:** If the model file is missing, startup stops with a useful error.
-- **Typed settings:** Invalid thresholds and log levels are rejected.
-- **Private by default:** The prediction log avoids raw customer feature values.
-- **Masked secrets:** Sensitive log fields are replaced before JSON is rendered.
-- **Traceable requests:** A trace ID makes it easier to investigate a problem.
-- **Secret-leak drill:** Deleting a token from a file does **not** erase it from Git history.
+```bash
+make lint
+make test                         # includes the complete golden regression
+make golden                       # batch output, then exact ID/score validation
+make hooks                        # install the local Gitleaks pre-commit hook
+```
 
-For a real leak, the first action is to **revoke or rotate the credential**, then clean up history and improve scanning. Details: [`INCIDENT.md`](INCIDENT.md).
+Without Make, run the commands in [Makefile](Makefile) directly in the activated environment.
 
-## 08 · Project Structure
+Tests cover decision boundaries, feature invariance, malformed requests, startup, error privacy, timezone equivalence, nested secret masking, and incomplete/duplicate/invalid golden outputs. Coverage includes branches but currently excludes the batch entrypoint; `make golden` exercises that separately.
 
-~~~text
-.
-├── .github/workflows/      # CI and nightly checks
-├── configs/                # Sample and development settings
-├── data/                   # Sample transactions and golden scores
-├── models/                 # Trained model bundle
-├── payloads/               # Example and invalid API requests
-├── scripts/                # Load tests and golden-result checks
-├── src/fraud_service/
-│   ├── domain/             # Transactions, features, decisions
-│   ├── service/            # Scoring logic and model interface
-│   ├── adapters/           # scikit-learn connection
-│   ├── api/                # FastAPI app and schemas
-│   ├── batch.py            # Batch scoring
-│   ├── config.py           # Typed settings
-│   └── logging_setup.py    # Structured JSON logs
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── behavioural/
-├── BENCHMARKS.md
-├── INCIDENT.md
-├── Dockerfile
-└── docker-compose.yml
-~~~
+CI runs lint, the full test suite, secret scanning, a container smoke test and a **600,000,000-byte uncompressed image-size gate**. Only successful pushes to `main` publish the image. Nightly repeats the full suite. [Workflow](.github/workflows/ci.yml) · [Evidence and pending checks](docs/EVIDENCE.md)
 
-## 09 · What This Project Taught Me
+Published image address:
 
-**A prediction is a result. Engineering makes that result usable, testable, traceable, and maintainable.**
+```bash
+docker pull ghcr.io/jnjnmaizi/janaalhuamizi_sda-aie-113_workshop:main
+```
 
-Sometimes the biggest failures are small: a single comparison operator, an unvalidated setting, a risky log line, or an unchecked pull request.
+For a reproducible release, use the commit tag or registry digest. A successful publish does not prove anonymous pull permissions; those depend on package visibility.
 
-I wanted this project to show not only **what I built**, but **why each part matters**.
+## Workshop evidence
+
+| Lab | Implementation | Evidence |
+|---|---|---|
+| 1 · Refactor | Layers, model protocol, batch scoring | Golden regression and import contract |
+| 2a · Serve | Prediction, health and readiness | API integration tests |
+| 2b · Harden | Warm-up, safe errors, tracing | Integration tests and [benchmarks](BENCHMARKS.md) |
+| 3 · Containerise | Multi-stage, non-root, Compose | CI smoke test and size gate |
+| 4 · Test | Unit, integration, model behaviour | Full CI suite and coverage artifact |
+| 5 · Automate | Checks and registry publishing | Actions; branch protection still requires setup |
+| 6 · Secure | Typed config, masked logs, scanning | Regression tests and [incident plan](INCIDENT.md) |
+
+Historical measurements remain in [BENCHMARKS.md](BENCHMARKS.md); they are not promises for other machines. Updated verification is recorded separately in [docs/EVIDENCE.md](docs/EVIDENCE.md).
+
+## Security and contribution
+
+No real secret is required to run this workshop service. Use local environment variables or a runtime secret store if credentials are added. The registry pipeline uses the short-lived built-in `GITHUB_TOKEN` with publishing permissions confined to its publish job. Do not put secrets in message strings: masking is a safety net for structured keys, not a guarantee for arbitrary text. Unexpected exceptions log their type, not their value or local variables.
+
+Install the pre-commit hook before contributing. Open a PR and wait for the checks. The repository owner must enable required checks and branch protection: [exact setup checklist](docs/EVIDENCE.md#repository-settings).
 
 ---
 
-<div align="center">
-
-**Built by Jana Alhumaizi**  
-*Computer Science · SDAIA Academy SDA-AIE-113 Workshop*
-
-[Workshop](https://aie113.ibrahimalshehri.sa/) · [Original course repository](https://github.com/snow10100/fraud-service) · [Benchmarks](BENCHMARKS.md)
-
-</div>
+**Built by Jana Alhumaizi** · [Workshop](https://aie113.ibrahimalshehri.sa/) · [Original labs](https://github.com/snow10100/fraud-service/tree/main/labs) · [Final-project guide](https://github.com/snow10100/aie113-projects)

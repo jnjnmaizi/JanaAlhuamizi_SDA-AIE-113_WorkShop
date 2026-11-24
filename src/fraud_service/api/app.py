@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
     configure_logging(settings.log_level)
     # The config-drift guard: one line showing what this process REALLY runs with.
     log.info("settings_effective",
-             **settings.model_dump(mode="json", exclude={"registry_token"}))
+             **settings.model_dump(mode="json", exclude={"registry_token", "redis_url"}))
     app.state.settings = settings
     app.state.started_at = datetime.now(UTC)
 
@@ -78,7 +78,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(Exception)
     async def unhandled(request: Request, exc: Exception):
         # Never leak stack traces to clients; always give them a trace_id.
-        log.error("unhandled_exception", exc_info=exc)
+        log.error("unhandled_exception", exception_type=type(exc).__name__)
         return _error(request, 500, "INTERNAL_ERROR",
                       "Unexpected error; contact support with trace_id")
 
@@ -93,7 +93,8 @@ def _error(request: Request, status: int, code: str, message: str,
            headers: Mapping[str, str] | None = None, **extra: object) -> JSONResponse:
     """One error shape for every failure: {"error": {code, message, trace_id}}."""
     body = {"code": code, "message": message, "trace_id": _trace_id(request), **extra}
-    return JSONResponse(status_code=status, content={"error": body}, headers=headers)
+    return JSONResponse(status_code=status, content={"error": body},
+                        headers={**(headers or {}), "X-Trace-Id": _trace_id(request)})
 
 
 def _warmup_features() -> FeatureVector:
