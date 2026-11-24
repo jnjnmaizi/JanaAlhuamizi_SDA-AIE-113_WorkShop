@@ -3,7 +3,9 @@ FROM python:3.12-slim AS builder
 
 COPY requirements.lock .
 RUN python -m venv /opt/venv \
-    && /opt/venv/bin/pip install --no-cache-dir -r requirements.lock
+    && /opt/venv/bin/pip install --no-cache-dir --no-compile -r requirements.lock
+# Dependency test suites are not needed by the inference runtime.
+RUN find /opt/venv/lib/python3.12/site-packages -type d -name tests -prune -exec rm -rf {} +
 
 # Stage 2: Runtime
 FROM python:3.12-slim AS runtime
@@ -23,6 +25,7 @@ ARG GIT_SHA=dev
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONPATH=/app/src \
     PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
     FRAUD_MODEL_PATH=/models/fraud_xgb_v3.joblib \
     FRAUD_GIT_SHA=$GIT_SHA
 

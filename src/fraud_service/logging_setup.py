@@ -7,15 +7,22 @@ import structlog
 from structlog.typing import EventDict, WrappedLogger
 
 SENSITIVE_KEYS = {"password", "token", "secret", "authorization",
-                  "registry_token", "national_id", "card_number"}
+                  "registry_token", "national_id", "card_number", "redis_url", "api_key"}
 
 
 def _mask_sensitive(logger: WrappedLogger, method: str, event_dict: EventDict) -> EventDict:
     """Defensive masking: even if someone logs a secret, it leaves masked."""
-    for key in list(event_dict):
-        if key.lower() in SENSITIVE_KEYS:
-            event_dict[key] = "***MASKED***"
-    return event_dict
+    def scrub(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                key: "***MASKED***" if str(key).lower() in SENSITIVE_KEYS else scrub(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, (list, tuple)):
+            return [scrub(item) for item in value]
+        return value
+
+    return scrub(event_dict)
 
 
 def configure_logging(level: str = "INFO") -> None:
@@ -26,7 +33,6 @@ def configure_logging(level: str = "INFO") -> None:
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),   # always UTC
             _mask_sensitive,
-            structlog.processors.dict_tracebacks,
             structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, level)),

@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     @field_validator("model_path")
     @classmethod
     def model_file_must_exist(cls, v: Path) -> Path:
-        if not v.exists():
+        if not v.is_file():
             # Fail HERE, at startup, with a message an operator understands,
             # not with a 500 on the first request.
             raise ValueError(f"model artefact not found: {v}")

@@ -110,3 +110,32 @@ def test_real_application_startup(monkeypatch):
     data = response.json()
     assert data["model_version"] == "v3.2.0"
     assert 0 <= data["fraud_probability"] <= 1
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize('timestamp', ['2026-07-05T03:30:00', '2026-07-05', 1783222200])
+def test_timestamp_contract(client_factory, timestamp):
+    response = client_factory().post('/v1/predict', json={**SAMPLE, 'timestamp': timestamp})
+    assert response.status_code == 422
+
+
+@pytest.mark.integration
+def test_crash_keeps_trace_header_without_logging_exception_values(client_factory, monkeypatch):
+    import structlog
+    from structlog.testing import capture_logs
+
+    def fail(self, transaction):
+        raise RuntimeError('sentinel-private-value')
+
+    monkeypatch.setattr(FraudScorer, 'score', fail)
+    previous = structlog.get_config()
+    try:
+        with capture_logs() as logs:
+            response = client_factory().post('/v1/predict', json=SAMPLE,
+                                             headers={'X-Trace-Id': 'crash-test'})
+        assert response.status_code == 500
+        assert response.headers['X-Trace-Id'] == 'crash-test'
+        assert 'sentinel-private-value' not in json.dumps(logs)
+        assert any(e.get('exception_type') == 'RuntimeError' for e in logs)
+    finally:
+        structlog.configure(**previous)

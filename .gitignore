@@ -9,5 +9,7 @@ htmlcov/
 *.egg-info/
 scored*.csv
 .env
+.env.*
+*.log
 *.bak
 *~

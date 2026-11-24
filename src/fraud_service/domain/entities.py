@@ -1,5 +1,5 @@
 import math
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
@@ -28,6 +28,13 @@ class Transaction(BaseModel):
     @classmethod
     def normalise_mcc(cls, value: str) -> str:
         return value.strip().upper().replace(" ", "_")
+
+    @field_validator("timestamp")
+    @classmethod
+    def normalise_timestamp(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("timestamp must include a timezone")
+        return value.astimezone(UTC)
 
     def to_features(self) -> FeatureVector:
         hour = self.timestamp.hour
