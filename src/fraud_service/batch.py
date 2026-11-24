@@ -22,7 +22,7 @@ def main() -> None:
     print(f"Loaded model fraud_xgb {model.model_version}")
 
     scorer = FraudScorer(model=model, block_threshold=args.threshold)
-    counts = Counter()
+    counts: Counter[str] = Counter()
 
     with (
         args.input.open(newline="", encoding="utf-8") as source,
